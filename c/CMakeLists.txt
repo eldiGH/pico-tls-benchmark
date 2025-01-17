@@ -67,5 +67,23 @@ target_link_libraries(pico-tls-benchmark-c
         pico_mbedtls
         )
 
+if (DEFINED ENV{WIFI_SSID} AND (NOT WIFI_SSID))
+    set(WIFI_SSID $ENV{WIFI_SSID})
+    message("Using WIFI_SSID from environment ('${WIFI_SSID}')")
+    set(WIFI_SSID "${WIFI_SSID}" CACHE INTERNAL "WiFi SSID for benchmark")
+endif()
+
+if (DEFINED ENV{WIFI_PASSWORD} AND (NOT WIFI_PASSWORD))
+    set(WIFI_PASSWORD $ENV{WIFI_PASSWORD})
+    message("Using WIFI_PASSWORD from environment")
+    set(WIFI_PASSWORD "${WIFI_PASSWORD}" CACHE INTERNAL "WiFi password for benchmark")
+endif()
+if (WIFI_SSID AND WIFI_PASSWORD)
+target_compile_definitions(pico-tls-benchmark-c PRIVATE
+        WIFI_SSID=\"${WIFI_SSID}\"
+        WIFI_PASSWORD=\"${WIFI_PASSWORD}\"
+        )
+endif()
+
 pico_add_extra_outputs(pico-tls-benchmark-c)
 

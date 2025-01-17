@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
-#include "config.h"
 #include "https.c"
+
+#if !defined(WIFI_SSID) || !defined(WIFI_PASSWORD)
+#include "config.h"
+#endif
 
 void make_https_request(const char *hostname, const char *url)
 {
