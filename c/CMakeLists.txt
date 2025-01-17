@@ -23,7 +23,9 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico_w CACHE STRING "Board type")
+if (NOT DEFINED ENV{PICO_BOARD})
+    set(PICO_BOARD pico_w CACHE STRING "Board type")
+endif()
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -32,6 +34,10 @@ project(pico-tls-benchmark-c C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
+
+if (NOT PICO_CYW43_SUPPORTED)
+    message(FATAL_ERROR "Board does not support CYW43")
+endif()
 
 # Add executable. Default name is the project name, version 0.1
 
