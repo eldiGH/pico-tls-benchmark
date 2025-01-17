@@ -75,4 +75,8 @@
 #define MBEDTLS_PLATFORM_MS_TIME_ALT
 #endif
 
+#ifndef NDEBUG
+#define MBEDTLS_DEBUG_C
+#endif
+
 #endif

@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "https.c"
+#include "mbedtls/debug.h"
 
 #if !defined(WIFI_SSID) || !defined(WIFI_PASSWORD)
 #include "config.h"
@@ -41,6 +42,15 @@ int main()
 
     // Enable wifi station
     cyw43_arch_enable_sta_mode();
+
+#ifndef NDEBUG
+    // build for debug (slows down TLS handshakes)
+    // Make sure LWIP_DEBUG is 1 (remove #undef LWIP_DEBUG)
+    // Turn ON ALTCP_MBEDTLS_DEBUG and ALTCP_MBEDTLS_LIB_DEBUG?
+    // enable mbedtls debug below, set to 3 to get details
+    // Make sure MBEDTLS_DEBUG_C is defined
+    mbedtls_debug_set_threshold(3);
+#endif
 
     if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000))
     {
