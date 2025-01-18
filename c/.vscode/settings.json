@@ -46,6 +46,7 @@
     "http_client.h": "c",
     "time.h": "c",
     "random": "c",
-    "string.h": "c"
+    "string.h": "c",
+    "altcp_tls.h": "c"
   }
 }

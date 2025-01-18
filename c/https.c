@@ -1,6 +1,5 @@
 #include "tls.c"
 #include "dns.c"
-#include "lwip/apps/http_client.h"
 #include <string.h>
 
 #define GET_REQUEST_TEMPLATE "GET %s HTTP/1.1\r\nHost: %s\r\nAccept: */*\r\nUser-Agent: RaspberryPiPico/1.0 (lwIP; bare-metal)\r\nConnection: close\r\n\r\n"
@@ -81,6 +80,7 @@ err_t https_make_request_async(HTTPS_STATE_T *state)
   {
     printf("Could not resolve hostname: %s err: %i\n", state->hostname, err);
     dns_free_state(state->dns_state);
+    state->result = err;
     return err;
   }
 
@@ -101,6 +101,7 @@ err_t https_make_request_async(HTTPS_STATE_T *state)
   {
     printf("Could not make connection to: %s err: %i\n", state->hostname, err);
     https_free_state(state);
+    state->result = err;
     return err;
   }
 

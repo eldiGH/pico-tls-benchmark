@@ -28,6 +28,9 @@ typedef struct TLS_CLIENT_STATE
   tls_close_fn on_close_callback;
   tls_recv_fn on_recv_callback;
 
+  u64_t altcp_connect_start_time;
+  u64_t altcp_connect_end_time;
+
 } TLS_CLIENT_STATE_T;
 
 static struct altcp_tls_config *default_tls_config = NULL;
@@ -132,10 +135,11 @@ void tls_client_err(void *arg, err_t err)
 {
   TLS_CLIENT_STATE_T *state = (TLS_CLIENT_STATE_T *)arg;
 
+  state->result = err;
+
   printf("TLS connection error! %i\n", err);
   tls_client_close(state);
 
-  state->result = err;
   return;
 }
 
@@ -195,10 +199,12 @@ err_t tls_client_send(TLS_CLIENT_STATE_T *state, void *data, u16_t len)
 err_t tls_client_connected(void *arg, struct altcp_pcb *pcb, err_t err)
 {
   TLS_CLIENT_STATE_T *state = (TLS_CLIENT_STATE_T *)arg;
+  state->altcp_connect_end_time = time_us_64();
 
   if (err != ERR_OK)
   {
     printf("connection failed to %s with error: \n", state->hostname, err);
+    state->result = err;
     return tls_client_close(state);
   }
 
@@ -232,6 +238,7 @@ err_t tls_client_open_connection(TLS_CLIENT_STATE_T *state)
   state->start_time = time_us_64();
 
   cyw43_arch_lwip_begin();
+  state->altcp_connect_start_time = time_us_64();
   err = altcp_connect(state->pcb, &state->ip_addr, state->port, tls_client_connected);
   cyw43_arch_lwip_end();
 

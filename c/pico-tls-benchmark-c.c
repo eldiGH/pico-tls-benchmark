@@ -8,7 +8,7 @@
 #include "config.h"
 #endif
 
-void make_https_request(const char *hostname, const char *url)
+void make_https_request_test(const char *hostname, const char *url, const char *cert_type)
 {
     HTTPS_STATE_T *state = https_init_state(hostname, url);
 
@@ -17,12 +17,12 @@ void make_https_request(const char *hostname, const char *url)
 
     if (err != 0)
     {
-        printf("Request to https://%s%s FAILED in %.2f ms with error number: %d\n", hostname, url, (float)(time_us_64() - req_start_time) / 1000, err);
+        printf("Request to https://%s%s FAILED in %.2fms with error number: %d\n", hostname, url, (float)(time_us_64() - req_start_time) / 1000, err);
         https_free_state(state);
         return;
     }
 
-    printf("Request to https://%s%s SUCCEEDED in %.2f ms\n", hostname, url, (float)(time_us_64() - req_start_time) / 1000);
+    printf("Request to https://%s%s SUCCEEDED in %.2fms | altcp_connect time: %.2fms | cert: %s\n", hostname, url, (float)(time_us_64() - req_start_time) / 1000, (float)(state->tls_state->altcp_connect_end_time - state->tls_state->altcp_connect_start_time) / 1000, cert_type);
     https_free_state(state);
     return;
 }
@@ -60,11 +60,16 @@ int main()
 
     printf("Connected in %.2f ms\n", (float)(time_us_64() - start_time) / 1000);
 
-    make_https_request("www.google.com", "/");
-    make_https_request("www.youtube.com", "/");
-    make_https_request("www.facebook.com", "/");
-    make_https_request("www.wikipedia.org", "/");
-    make_https_request("catfact.ninja", "/fact");
+    make_https_request_test("www.google.com", "/", "RSA SHA-256");
+    make_https_request_test("www.youtube.com", "/", "RSA SHA-256");
+    make_https_request_test("www.facebook.com", "/", "RSA SHA-256");
+    make_https_request_test("www.whatsapp.com", "/", "RSA SHA-256");
+    make_https_request_test("www.linkedin.com", "/", "RSA SHA-256");
+
+    make_https_request_test("catfact.ninja", "/fact", "ECDSA SHA-256");
+    make_https_request_test("www.wikipedia.org", "/", "ECDSA SHA-384");
+    make_https_request_test("scotthelme.co.uk", "/", "ECDSA SHA-384");
+    make_https_request_test("stackoverflow.com", "/", "ECDSA SHA-384");
 
     while (true)
     {
