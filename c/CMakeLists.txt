@@ -62,8 +62,7 @@ target_include_directories(pico-tls-benchmark-c PRIVATE
 # Add any user requested libraries
 target_link_libraries(pico-tls-benchmark-c 
         pico_cyw43_arch_lwip_threadsafe_background
-        pico_lwip_mbedtls
-        pico_mbedtls
+        pico_lwip
         )
 
 if (DEFINED ENV{WIFI_SSID} AND (NOT WIFI_SSID))
