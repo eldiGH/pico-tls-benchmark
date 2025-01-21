@@ -47,6 +47,9 @@
     "time.h": "c",
     "random": "c",
     "string.h": "c",
-    "altcp_tls.h": "c"
+    "altcp_tls.h": "c",
+    "net_sockets.h": "c",
+    "limits": "c",
+    "platform.h": "c"
   }
 }

@@ -1,13 +1,21 @@
+#ifndef TCP_INCLUDED
+#define TCP_INCLUDED
+
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 
 #include "pico/cyw43_arch.h"
 
-typedef void (*tcp_close_fn)(void *arg, err_t err);
-typedef void (*tcp_recv_fn)(void *arg, struct pbuf *p);
+#define TCP_CLIENT_STATE_POOL_SIZE 5
+
+typedef void (*tcp_close_callback)(void *arg, err_t err);
+typedef void (*tcp_recv_callback)(void *arg, struct pbuf *p);
+typedef void (*tcp_connected_callback)(void *arg);
 
 typedef struct TCP_CLIENT_STATE
 {
+  bool is_used;
+
   ip_addr_t ip_addr;
   uint16_t port;
 
@@ -15,6 +23,7 @@ typedef struct TCP_CLIENT_STATE
 
   u64_t start_time;
 
+  bool connected;
   bool completed;
   err_t result;
 
@@ -24,21 +33,28 @@ typedef struct TCP_CLIENT_STATE
   u16_t payload_len;
 
   void *callback_arg;
-  tcp_close_fn on_close_callback;
-  tcp_recv_fn on_recv_callback;
+  tcp_close_callback on_close_callback;
+  tcp_recv_callback on_recv_callback;
+  tcp_connected_callback on_connected_callback;
 
   u64_t tcp_connect_start_time;
   u64_t tcp_connect_end_time;
 
 } TCP_CLIENT_STATE_T;
 
-TCP_CLIENT_STATE_T *tcp_client_init_state(ip_addr_t *ip_addr, uint16_t port)
+TCP_CLIENT_STATE_T tcp_client_state = {0};
+
+TCP_CLIENT_STATE_T *
+tcp_client_init_state(ip_addr_t *ip_addr, uint16_t port)
 {
-  TCP_CLIENT_STATE_T *state = calloc(1, sizeof(TCP_CLIENT_STATE_T));
-  if (!state)
+  TCP_CLIENT_STATE_T *state = &tcp_client_state;
+  if (state->is_used)
   {
-    panic("Could not initialize tcp_client_state!\n");
+    panic("tcp state already in use!");
   }
+
+  memset(state, 0, sizeof(TCP_CLIENT_STATE_T));
+  state->is_used = true;
 
   if (ip_addr)
   {
@@ -53,7 +69,7 @@ TCP_CLIENT_STATE_T *tcp_client_init_state(ip_addr_t *ip_addr, uint16_t port)
 
 void tcp_client_free_state(TCP_CLIENT_STATE_T *state)
 {
-  free(state);
+  state->is_used = false;
 }
 
 err_t tcp_client_close(void *arg)
@@ -62,6 +78,7 @@ err_t tcp_client_close(void *arg)
   err_t err = ERR_OK;
 
   state->completed = true;
+  state->connected = false;
   if (state->pcb == NULL)
   {
     return err;
@@ -148,19 +165,22 @@ err_t tcp_client_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
     {
       state->on_recv_callback(state->callback_arg, p);
     }
-    tcp_recved(pcb, p->tot_len);
+    else
+    {
+      pbuf_free(p);
+      tcp_recved(pcb, p->tot_len);
+    }
   }
-  pbuf_free(p);
 
   return ERR_OK;
 }
 
 err_t tcp_client_send(TCP_CLIENT_STATE_T *state, void *data, u16_t len)
 {
-  err_t err = tcp_write(state->pcb, data, len, TCP_WRITE_FLAG_COPY);
-  if (err != ERR_OK)
+  state->result = tcp_write(state->pcb, data, len, TCP_WRITE_FLAG_COPY);
+  if (state->result != ERR_OK)
   {
-    printf("error writing data, err=%d", err);
+    printf("error writing data, err=%d", state->result);
     return tcp_client_close(state);
   }
 
@@ -179,10 +199,17 @@ err_t tcp_client_connected(void *arg, struct tcp_pcb *pcb, err_t err)
     return tcp_client_close(state);
   }
 
+  if (state->on_connected_callback)
+  {
+    state->on_connected_callback(state->callback_arg);
+  }
+
   if (state->payload && state->payload_len > 0)
   {
     tcp_client_send(state, state->payload, state->payload_len);
   }
+
+  state->connected = true;
 
   return ERR_OK;
 }
@@ -215,3 +242,5 @@ err_t tcp_client_open_connection(TCP_CLIENT_STATE_T *state)
 
   return err;
 }
+
+#endif

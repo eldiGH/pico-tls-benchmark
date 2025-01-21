@@ -1,21 +1,36 @@
+#ifndef DNS_INCLUDED
+#define DNS_INCLUDED
+
 #include "lwip/dns.h"
 #include "pico/cyw43_arch.h"
 
 typedef struct DNS_STATE
 {
+  bool is_used;
   bool completed;
   err_t result;
   ip_addr_t ip_addr;
   const char *hostname;
 } DNS_STATE_T;
 
+DNS_STATE_T *dns_init_state(const char *hostname);
+void dns_free_state(DNS_STATE_T *state);
+
+err_t dns_resolve_async(DNS_STATE_T *state);
+void dns_wait_for_resolve(DNS_STATE_T *state);
+err_t dns_resolve_sync(DNS_STATE_T *state);
+
+DNS_STATE_T dns_state = {0};
+
 DNS_STATE_T *dns_init_state(const char *hostname)
 {
-  DNS_STATE_T *state = calloc(1, sizeof(DNS_STATE_T));
-  if (!state)
+  DNS_STATE_T *state = &dns_state;
+  if (state->is_used)
   {
-    panic("Could not initialize dns_state!\n");
+    panic("dns state already in use!");
   }
+  memset(state, 0, sizeof(DNS_STATE_T));
+  state->is_used = true;
   state->hostname = hostname;
 
   return state;
@@ -23,7 +38,7 @@ DNS_STATE_T *dns_init_state(const char *hostname)
 
 void dns_free_state(DNS_STATE_T *state)
 {
-  free(state);
+  state->is_used = false;
 }
 
 void dns_resolve_found(const char *name, const ip_addr_t *ip_addr, void *arg)
@@ -76,3 +91,5 @@ err_t dns_resolve_sync(DNS_STATE_T *state)
 
   return state->result;
 }
+
+#endif
