@@ -3,7 +3,7 @@
 #include "pico/cyw43_arch.h"
 #include "http.c"
 #include "https.c"
-// #include "mbedtls/debug.h"
+#include "mbedtls/debug.h"
 
 #if !defined(WIFI_SSID) || !defined(WIFI_PASSWORD)
 #include "config.h"
@@ -14,7 +14,7 @@ void make_https_request_test(const char *hostname, const char *url, const char *
     HTTPS_STATE_T *state = https_init_state(hostname, url);
 
     u64_t req_start_time = time_us_64();
-    err_t err = https_make_request_sync(state);
+    int err = https_make_request_sync(state);
 
     if (err != 0)
     {
