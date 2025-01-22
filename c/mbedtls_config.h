@@ -80,4 +80,6 @@
 #define MBEDTLS_DEBUG_C
 #endif
 
+#define MBEDTLS_ECP_NIST_OPTIM
+
 #endif
