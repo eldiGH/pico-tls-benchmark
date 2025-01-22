@@ -124,14 +124,3 @@ err_t http_make_request_sync(HTTP_STATE_T *state)
 
   return state->result;
 }
-
-err_t http_make_simple_request_sync(const char *hostname, const char *url, bool parse_response)
-{
-  HTTP_STATE_T *state = http_init_state(hostname, url);
-
-  err_t err = http_make_request_sync(state);
-
-  http_free_state(state);
-
-  return err;
-}

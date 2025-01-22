@@ -18,12 +18,20 @@ typedef struct HTTPS_STATE
   char payload[HTTP_PAYLOAD_MAX_SIZE];
 
   bool completed;
-  err_t result;
+  int result;
 } HTTPS_STATE_T;
 
 HTTPS_STATE_T https_state = {0};
 
-void https_on_connection_close(void *arg, err_t err)
+void https_on_recv(void *arg, u8_t *buf, size_t len)
+{
+  for (int i = 0; i < len; i++)
+  {
+    putchar(buf[i]);
+  }
+}
+
+void https_on_connection_close(void *arg, int err)
 {
   HTTPS_STATE_T *state = (HTTPS_STATE_T *)arg;
 
@@ -49,6 +57,7 @@ HTTPS_STATE_T *https_init_state(const char *hostname, const char *url)
 
   state->tls_state->callback_arg = state;
   state->tls_state->on_close_callback = https_on_connection_close;
+  // state->tls_state->on_recv_callback = https_on_recv;
 
   return state;
 }
@@ -70,9 +79,9 @@ void https_free_state(HTTPS_STATE_T *state)
   state->is_used = false;
 }
 
-err_t https_make_request_async(HTTPS_STATE_T *state)
+int https_make_request_async(HTTPS_STATE_T *state)
 {
-  err_t err = dns_resolve_sync(state->dns_state);
+  int err = dns_resolve_sync(state->dns_state);
   if (err != ERR_OK)
   {
     printf("Could not resolve hostname: %s err: %i\n", state->hostname, err);
@@ -112,9 +121,9 @@ void https_wait_for_request(HTTPS_STATE_T *state)
   }
 }
 
-err_t https_make_request_sync(HTTPS_STATE_T *state)
+int https_make_request_sync(HTTPS_STATE_T *state)
 {
-  err_t err = https_make_request_async(state);
+  int err = https_make_request_async(state);
   if (err)
   {
     return err;
@@ -122,15 +131,4 @@ err_t https_make_request_sync(HTTPS_STATE_T *state)
   https_wait_for_request(state);
 
   return state->result;
-}
-
-err_t https_make_simple_request_sync(const char *hostname, const char *url, bool parse_response)
-{
-  HTTPS_STATE_T *state = https_init_state(hostname, url);
-
-  err_t err = https_make_request_sync(state);
-
-  https_free_state(state);
-
-  return err;
 }

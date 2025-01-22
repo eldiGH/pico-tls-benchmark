@@ -180,7 +180,7 @@ err_t tcp_client_send(TCP_CLIENT_STATE_T *state, void *data, u16_t len)
   state->result = tcp_write(state->pcb, data, len, TCP_WRITE_FLAG_COPY);
   if (state->result != ERR_OK)
   {
-    printf("error writing data, err=%d", state->result);
+    printf("error writing data, err=%d\n", state->result);
     return tcp_client_close(state);
   }
 

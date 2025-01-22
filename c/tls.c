@@ -7,7 +7,7 @@
 #include "mbedtls/error.h"
 #include "mbedtls/debug.h"
 
-typedef void (*tls_close_callback)(void *arg, err_t err);
+typedef void (*tls_close_callback)(void *arg, int err);
 typedef void (*tls_recv_callback)(void *arg, u8_t *buf, size_t len);
 typedef void (*tls_connected_callback)(void *arg);
 
@@ -51,11 +51,12 @@ TLS_CLIENT_STATE_T tls_client_state = {0};
 
 err_t tls_client_close(TLS_CLIENT_STATE_T *state)
 {
+  if (state->tcp_state->pcb == NULL)
+  {
+    return state->result;
+  }
+
   mbedtls_ssl_close_notify(&state->mbedtls.ssl);
-  mbedtls_ssl_free(&state->mbedtls.ssl);
-  mbedtls_ssl_config_free(&state->mbedtls.conf);
-  mbedtls_ctr_drbg_free(&state->mbedtls.ctr_drbg);
-  mbedtls_entropy_free(&state->mbedtls.entropy);
 
   return tcp_client_close(state->tcp_state);
 }
@@ -66,7 +67,7 @@ int tls_client_send(TLS_CLIENT_STATE_T *state, void *data, u16_t len)
 
   if (bytes_written < 0)
   {
-    tcp_client_close(state->tcp_state);
+    tls_client_close(state);
     printf("ERROR while sending tls data! %d\n", bytes_written);
     state->result = bytes_written;
     return bytes_written;
@@ -160,11 +161,20 @@ void tls_tcp_recv(void *arg, struct pbuf *p)
 void tls_tcp_close(void *arg, err_t err)
 {
   TLS_CLIENT_STATE_T *state = (TLS_CLIENT_STATE_T *)arg;
-  state->result = err;
+
+  if (err == 0 && !state->finished_handshake)
+  {
+    state->handshake_end_time = time_us_64();
+    state->result = mbedtls_ssl_handshake(&state->mbedtls.ssl);
+  }
+  else
+  {
+    state->result = err;
+  }
 
   if (state->on_close_callback)
   {
-    state->on_close_callback(state->callback_arg, err);
+    state->on_close_callback(state->callback_arg, state->result);
   }
 }
 
@@ -188,8 +198,6 @@ void tls_client_free_state(TLS_CLIENT_STATE_T *state)
 {
   tcp_client_free_state(state->tcp_state);
   state->is_used = false;
-
-  mbedtls_ssl_close_notify(&state->mbedtls.ssl);
 
   mbedtls_ssl_free(&state->mbedtls.ssl);
   mbedtls_ssl_config_free(&state->mbedtls.conf);
