@@ -11,6 +11,8 @@ typedef void (*tls_close_callback)(void *arg, err_t err);
 typedef void (*tls_recv_callback)(void *arg, u8_t *buf, size_t len);
 typedef void (*tls_connected_callback)(void *arg);
 
+#define DECODED_DATA_BUF_SIZE 2048
+
 typedef struct TLS_CLIENT_STATE
 {
   bool is_used;
@@ -79,21 +81,34 @@ void tls_tcp_recv(void *arg, struct pbuf *p)
 
   if (state->finished_handshake)
   {
-    char buf[2048];
-
-    if (p->tot_len > 2048)
-    {
-      panic("Packet overflow!");
-    }
-
     state->p = p;
     state->p_bytes_read = 0;
 
     int ret = 0;
+    u8_t decoded_data_buf[DECODED_DATA_BUF_SIZE];
     do
     {
-      ret = mbedtls_ssl_read(&state->mbedtls.ssl, buf, 2048);
-    } while (ret == MBEDTLS_ERR_SSL_WANT_READ && state->p_bytes_read < state->p->tot_len);
+      ret = mbedtls_ssl_read(&state->mbedtls.ssl, decoded_data_buf, DECODED_DATA_BUF_SIZE);
+
+      if (ret == MBEDTLS_ERR_SSL_WANT_READ)
+      {
+        continue;
+      }
+
+      if (ret < 0)
+      {
+        break;
+      }
+
+      if (ret >= 0 && state->on_recv_callback)
+      {
+        state->on_recv_callback(state->callback_arg, decoded_data_buf, ret);
+      }
+
+    } while (state->p_bytes_read < state->p->tot_len);
+
+    tcp_recved(state->tcp_state->pcb, p->tot_len);
+    pbuf_free(p);
 
     if (ret < 0 && ret != MBEDTLS_ERR_SSL_WANT_READ)
     {
@@ -101,9 +116,6 @@ void tls_tcp_recv(void *arg, struct pbuf *p)
       tls_client_close(state);
       return;
     }
-
-    tcp_recved(state->tcp_state->pcb, p->tot_len);
-    pbuf_free(p);
 
     return;
   }
