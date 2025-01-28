@@ -1,7 +1,8 @@
 #ifndef MBEDTLS_CONFIG
 #define MBEDTLS_CONFIG
 
-/* Workaround for some mbedtls source files using INT_MAX without including limits.h */
+/* Workaround for some mbedtls source files using INT_MAX without including
+ * limits.h */
 #include <limits.h>
 
 #define MBEDTLS_NO_PLATFORM_ENTROPY
@@ -79,6 +80,10 @@
 #ifndef NDEBUG
 #define MBEDTLS_DEBUG_C
 #endif
+
+// Enables the use of the hardware acceleration functions, must be present along
+// with MBEDTLS_SHA256_C
+#define MBEDTLS_SHA256_ALT
 
 #define MBEDTLS_ECP_NIST_OPTIM
 

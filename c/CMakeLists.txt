@@ -24,7 +24,7 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 if (NOT DEFINED ENV{PICO_BOARD})
-    set(PICO_BOARD pico_w CACHE STRING "Board type")
+    set(PICO_BOARD pico2_w CACHE STRING "Board type")
 endif()
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
@@ -59,11 +59,17 @@ target_include_directories(pico-tls-benchmark-c PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}
 )
 
+# Add sha256 alt source to build
+target_sources(pico-tls-benchmark-c PRIVATE
+  ${CMAKE_CURRENT_LIST_DIR}/sha256_alt.c
+)
+
 # Add any user requested libraries
 target_link_libraries(pico-tls-benchmark-c 
         pico_cyw43_arch_lwip_threadsafe_background
         pico_lwip
         pico_mbedtls
+        pico_sha256
         )
 
 if (DEFINED ENV{WIFI_SSID} AND (NOT WIFI_SSID))
